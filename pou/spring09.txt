@@ -1,0 +1,112 @@
+Taking control of your logfiles with Unix Commandline utils.
+
+This is going to be similar in format to last fall's talk, where I have a 
+problem that I need to solve, and I use Unix commandline tools to solve it.
+
+This time I've got a webserver that I run.  I happen to run an apache server,
+which keeps logs.  Here is what that logfile looks like.
+
+$ head access_log
+
+head shows you the first 10 lines of the file.
+
+$ wc -l access_log
+
+this file is 32000 lines long.  That is way more than I'm going
+to go through on my own ever.  But I'd really like to know who is using my
+webserver the most.  Notice that the first column of each log entry is the IP
+address of the person who is accessing my server.  Why don't we find who the
+top 10 users of my server are?
+
+Why don't we start by removing all the information we don't care about,
+namely, I just want the IP addresses.  We can do this with a program called
+"grep", which uses regular expressions to filter text.
+
+Fortunately for us, IP address are extremely well defined.
+IPv4 address are defined as 4 1-3 digit numbers separated by dots.  We can
+easily describe this situation using regular expressions.
+
+There are many regular expression syntaxes. I'm going to use the perl syntax
+because I use it most often.  You'll find that regular expression syntax 
+varies a little bit from implementation to implementation, but the general
+idea is the same for all of them.
+
+There are two flags I'm passing to grep.  The first is -o, which tells
+grep to output matching text only. Normally, grep will output the entirely line
+that the matching text was found on.  The second is -P, which tells grep to use
+perl syntax instead of GNU syntax.
+$ grep -oP "^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}" access_log 
+
+or condensed to 
+
+$ grep -oP "^(\d{1,3}\.){3}\d{1,3}" access_log
+
+ok, now we have a list of IPs, but they're unsorted. Enter sort.
+
+Sort takes the input, and sorts it. simple enough.
+
+$ grep -oP "^(\d{1,3}\.){3}\d{1,3}" access_log | sort
+
+Hold on a minute...what's this vertical bar doing there.  That's a pipe.  
+Put simply, a pipe takes the output of one program, and sends it to the input
+of another.  In this case, instead of grep printing it's output to the screen,
+that output is instead sent to sort.  Basically, we're gluing these two
+programs together, using a pipe as that glue.
+
+OK, now we've got the IPs, and they're sorted.  But I want to know how many of 
+each one there is.  Enter uniq.
+
+$ grep -oP "^(\d{1,3}\.){3}\d{1,3}" access_log | sort | uniq -c
+
+uniq takes its input and prints it out, removing duplicate lines.  the -c
+flag tells uniq to output a count for each unique line.
+
+Sweet, now I know who, and how much.  But I want top 10. So now I guess I'll
+ need to sort again.
+
+$ grep -oP "^(\d{1,3}\.){3}\d{1,3}" access_log | sort | uniq -c | sort
+
+Well that doesn't look right. sort isn't sort quite the way we'd want it to...
+
+Looking at the manpage, I can see that there is a -n option for sorting 
+according to numerical (rather than alphabetical) value.  let's do that.
+
+$ grep -oP "^(\d{1,3}\.){3}\d{1,3}" access_log | sort | uniq -c | sort -n
+
+and just so I have to go into the manpage again, how about a little reverse 
+sorting 
+
+$ grep -oP "^(\d{1,3}\.){3}\d{1,3}" access_log | sort | uniq -c | sort -nr
+
+Now I have the ips, the count for each, and sorted from most to least.  
+I only care about the top 10, so I'm going to use head again.
+
+
+$ grep -oP "^(\d{1,3}\.){3}\d{1,3}" access_log | sort | uniq -c | sort -nr | head
+
+OK, now I need to get rid of that pesky count.  Another grep and we're golden.
+
+$ grep -oP "^(\d{1,3}\.){3}\d{1,3}" access_log | sort | uniq -c | sort -nr | head | grep -oP [0-9\.]*$
+
+Whew.  That was quite a command. It's about to get a whole lot worse.  
+So now is a good time to ask questions about anything I've just done.
+
+Ok, now I want to know what each of these people were doing, and how many times
+they did it.  We can probably do that with this same process of grep, sort, uniq
+and head.  
+
+Bash has a for loop construct.  It turns out that bash can loop over a series of
+whitespace delimited strings.  Why, how fortunate that our IP list is a series 
+of whitespace delimited strings.
+
+$ for IP in `grep -oP "^(\d{1,3}\.){3}\d{1,3}" access_log | sort | uniq -c | sort -nr | head | grep -oP [0-9\.]*$`; do grep $IP access_log | grep -oP "\"GET .*HTTP" | sort | uniq -c | sort -nr | head > $IP.usage; done
+
+Damn, stupid bots.  also, I grabbed this data from the cal poly SAN, and most
+people won't hit the same file multiple times.  If I remove bots...
+
+$ for IP in `cat access_log | grep -v msnbot | grep -v cuil | grep -v Googlebot | grep -v baidu | grep -v exabot | grep -v majestic12 | grep -v MLBot | grep -v Crawler | grep -oP "^(\d{1,3}\.){3}\d{1,3}" | sort | uniq -c | sort -nr | head | grep -oP [0-9\.]*$`; do grep $IP access_log | grep -oP "\"GET .*HTTP" | sort | uniq -c | sort -nr | head > $IP.usage; done
+
+Or compressed as 
+
+$ for IP in `cat access_log | grep -vP "(msnbot|cuil|Googlebot|baidu|exabot|majestic12|MLBot|Crawler)" | grep -oP
+"^(\d{1,3}\.){3}\d{1,3}" | sort | uniq -c | sort -nr | head | grep -oP [0-9\.]*$`; do grep $IP access_log | grep -oP "\"GET .*HTTP" | sort | uniq -c | sort -nr | head > $IP.usage; done
