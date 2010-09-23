@@ -59,20 +59,33 @@ Basic tools:
 - grep
   - makes history a little more managable
 
-More useful tools:
+More useful tricks, to save time and wow your enemies:
 
-At this point "why would I ever want to use this."  Well here are some nifty things you can't do with a GUI.
-
- - ps
-   - "aux"
- - Redirection
-    - Take the output to the screen and dump it to a file instead. 
-    - You can keep and compare outputs indefinitely.
-    - You can also send input in.
-    - This means you don't have to sit there and type "blah blah blah blah" over and over again.
-       - example with "sort"
  - alias
     - alias gcc="gcc -Wall -ansi -pedantic"
     - put it in .bashrc, and always happens
     - alias rm="rm -i"
 
+ - Host files off the CSC servers
+    - Did you know that you can host a simple web site off the CSC servers?
+      Here's how:
+    - create a folder in your home directory called "www"
+       - mkdir ~/www
+       - also, symlink this folder to public_html, some of the apache modules
+         need that
+    - Give the webserver (and everyone else!) the ability to traverse into
+      your home directory and read into your www folder
+       - chmod a+x ~
+       - chmod a+rx ~/www
+    - Now put an index.html into this folder.  Feel free to copy my template
+       - cp ~mgius/www/index_template.html ~/www/index.html
+    - Put whatever you like in here. Just make sure that any files you want to
+      be visible are readable by everybody (chmod a+r FILENAME), and any 
+      folder that you want to be enterable is readable, executable 
+      (chmod a+rx FILENAME)
+ - Quick Compile things with Make
+   - Make is complicated enough to warrant a talk by itself, but you can
+     actually use it to compile c programs.
+   - make helloworld
+   - Make is sensitive to file timestamps, so if your program hasn't been
+     updated, it won't waste time recompiling the program. 
