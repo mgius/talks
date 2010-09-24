@@ -1,0 +1,93 @@
+Alright, I'm going to do this a little differently.
+
+I have packages installed on my computer.  I can see all of them with dpkg -l
+
+$ dpkg -l
+
+As you can see, there's a lot of them.  Maybe I want to look through this list.  If you were here last time, you learned about a program called "less" that lets you look through text.  But dpkg -l doesn't create a file.  It outputs to the terminal.
+
+So, we've come to redirection.
+
+Redirection lets you take any output from a program, and redirect that output to a file instead of to your screen.  So, if we do
+
+$ dpkg -l > dpkg.txt
+
+Notice how there nothing was output to the screen.  That's because all of the output was redirected into the file dpkg.txt.  So, now we can look through that file
+
+$ less dpkg.txt
+
+now we can look through the output and find the packages that are half-installed.  They're the ones that are prefixed with rc, as opposed to ii
+
+however, this is kind of stupid.  Why should I have to create a file just to read the output.  This is where pipes come in.  
+
+Every program has input and output.  A redirection takes the output of a program and writes it to a file instead.  Well, why not send the output of a program straight into the input of another program.
+
+Now we come to a pipe.  Pipes take the output of one program, and send it to the input of another.  So we can skip writing a file to disk with
+
+dpkg -l | less
+
+See how I got the same result without a file.
+
+Now, I want to get rid of all the half-installed programs on my computer.  I have another program called "aptitude" that takes a list of packages as arguments.  But, I don't want to type in all the package names manually. that's no fun.  So let's see what we can do about this.
+
+The problem here is that dpkg -l gives us WAY too much information.  all I want is the package name. So I need to strip out the extra bits of all the lines.  To do this, I can use a program called 'grep.' 
+
+Grep is the GNU regular expression parser.  It uses a syntax known as regular expressions to match text.  You can use it like a sledgehammer:
+
+grep jabberwock jabberwock.txt
+
+This will print all lines containing the literal string "jabberwock" in the poem of the same name.  you can also use it more like a scalpel, giving you more finer grained control.
+
+grep -oE "\w+$" jabberwock.txt
+
+or as a silly example, every word that beings with the letter g or h
+
+grep -oE "\b[gh]\w*" jabberwock.txt
+
+This command prints out the last word of every line that doesn't end in a punctuation mark.  -o refers to output only the part of the word that matches, and -E gives us extended regular expressions, that allow me to use the '+' operator, among other things.
+
+So, now we've got grep, pipes, and redirection.  However, aptitude takes a list on the commandline, not input from the keyboard.  So, we need one last bit.  The final key to this problem is the backtick.
+
+The backtick runs the command between the backticks and places the output directly on the commandline. So,
+
+ls -an `which java` will run "which java." "which java" gives you ...  ls -an then uses the output of `which java` as it's argument.  
+
+Let's combine it all. in a problem.
+
+I want to remove all the programs on my computer that are partially installed.  
+
+I'm just going to tell you that aptitude expects just the package name, and that it can take any number of package names as arguments.
+
+So, we have a list of all the packages on a computer using 
+
+dpkg -l
+
+But we only care about the ones that are partially installed.  So...
+
+dpkg -l | grep -E ^rc
+
+We combine the pipe and grep commands.  Grep will only output lines that begin with the literal string "rc"
+
+Well, this is handy.  Let's try to only get the first part of the line, where it's just "rc" and then the package name.
+
+dpkg -l | grep -oE "^rc [[:alnum:]\.\-]*"
+
+now I just want the package name, which is fortunately at the end of the line.
+
+dpkg -l | grep -oE "^rc [[:alnum:]\.\-]*" | grep -oE "[[:alnum:]\.\-]*$"
+
+Sweet, now I've got the package names.  Now just backtick that whole thing and purge the results.
+
+aptitude purge `dpkg -l | grep -oE "^rc [[:alnum:]\.\-]*" | grep -oE "[[:alnum:]\.\-]*$"`
+
+redirection also works the other way.  You can redirect a file in to a program, and the program will read the file as though it were a keyboard.
+
+SCREEN
+
+FIND
+
+ENVVARS (CFLAGS)
+
+ALIAS
+
+
