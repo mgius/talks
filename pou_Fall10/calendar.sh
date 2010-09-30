@@ -75,6 +75,8 @@ function add_event {
 }
 
 function show_menu {
+    # case operates on strings.  You can actually do some basic
+    # regex operations in the casing.  See delete_*
     case $(zenity --list \
         --text="Select a menu option" \
         --column="token" --column="Menu Option" \
@@ -91,7 +93,7 @@ function show_menu {
         show_events
         return 0
         ;;
-    delete_event)
+    delete_*)
         delete_event
         return 0
         ;;
@@ -102,6 +104,7 @@ function show_menu {
          
 }
 
+# loop around show_menu until quit is selected
 show_menu
 while [ "0" -eq $? ]
 do
