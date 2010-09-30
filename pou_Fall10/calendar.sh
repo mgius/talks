@@ -11,8 +11,11 @@ function load_events {
     # $( FOO ) is a shell expansion.  It runs the internal command
     # and returns it.  ` FOO ` would also work, but $() offers some
     # advantages
+    # bash for loops tokenize on spaces.  So a loop on the string
+    # "1 2 3 4" will have 4 iterations
     for event in $(ls events) 
     do
+        # Shell expansion even works inside of strings
         EVENTS[$COUNTER]="$event $(cat events/$event)"
         # unfortunately, bash has kind of terrible arithmetic operators
         # COUNTER=$((COUNTER+1))
@@ -23,12 +26,19 @@ function load_events {
 
 function show_events {
     # local restricts the scope of this var to this block
+    # you don't technically have to declare eventsList, but I like being 
+    # explicit
     local eventsList=
     for index in $(seq 0 $((${#EVENTS[*]}-1)))
     do
+        # not really a string contatenation operator in bash
         eventsList="$eventsList ${EVENTS[$index]}"
     done
 
+    # zenity will display a list of events to the user.
+    # the > /dev/null is to ignore zenity's return value, which we don't 
+    # really care about at this point.  /dev/null is a bit bucket.  Bits check
+    # in, but they don't check out.
     zenity --list \
       --text="List of Calendar Items" \
       --column=FileName --column=Title --column=Date --column=Description \
@@ -38,11 +48,17 @@ function show_events {
 
 function delete_event {
     local eventsList=
+    # ${#EVENTS[*]} is bash's awful way of getting the length of an array
     for index in $(seq 0 $((${#EVENTS[*]}-1)))
     do
         eventsList="$eventsList ${EVENTS[$index]}"
     done
 
+    # now, instead of looping on the shell expansion, we're capturing it in a 
+    # variable
+    # notice the nested shell expansions, and the pipe in the inner expansion
+    # also, I'm using sed, which is a stream editor that can do some pretty
+    # nifty things, such as search and replace.
     toDelete=$(zenity --list \
       --text="Select an event to delete" \
       --column=FileName --column=Title --column=Date --column=Description \
@@ -66,6 +82,10 @@ function add_event {
 
     if [ $title -a $date -a $description ] 
     then
+        # this under variable is necessary.  If I did
+        # echo "$title_$date..."
+        # then bash will look for a variable of the name title_, which isn't
+        # what I want
         under="_"
         echo "$title$under$date$under$description" > events/$title
         load_events
@@ -103,6 +123,9 @@ function show_menu {
     esac
          
 }
+
+# initial load of the events
+load_events
 
 # loop around show_menu until quit is selected
 show_menu
